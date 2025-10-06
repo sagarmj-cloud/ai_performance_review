@@ -2,30 +2,49 @@
 Configuration settings for the AI Performance Review System
 """
 import os
+import streamlit as st
 from typing import List, Dict, Union
 from dotenv import load_dotenv
 
+# Load .env only for local development
 load_dotenv()
 
 
+def get_secret(key: str, default: str = "") -> str:
+    """
+    Get secret from Streamlit secrets (cloud) or environment (local).
+    Tries st.secrets first, falls back to os.getenv.
+    """
+    try:
+        # Try Streamlit secrets first (works in cloud)
+        return st.secrets.get(key, default)
+    except (AttributeError, FileNotFoundError):
+        # Fall back to environment variables (local development)
+        return os.getenv(key, default)
+
+
 class Settings:
-    """Application settings loaded from environment variables and defaults"""
+    """Application settings loaded from Streamlit secrets or environment variables"""
     
     # Qdrant Configuration
-    QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
+    QDRANT_URL: str = get_secret("QDRANT_URL", "http://localhost:6333")
+    QDRANT_API_KEY: str = get_secret("QDRANT_API_KEY", "")
     QDRANT_COLLECTION: str = "performance_reviews"
     
-    # Ollama Configuration
-    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    # LLM Configuration - Cloud uses OpenAI, Local can use Ollama
+    USE_OPENAI: bool = get_secret("USE_OPENAI", "false").lower() == "true"
+    
+    # OpenAI Configuration (for both embeddings and LLM on cloud)
+    OPENAI_API_KEY: str = get_secret("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = get_secret("OPENAI_MODEL", "gpt-4")
+    EMBEDDING_MODEL: str = "text-embedding-3-large"
+    
+    # Ollama Configuration (local only)
+    OLLAMA_BASE_URL: str = get_secret("OLLAMA_BASE_URL", "http://localhost:11434")
+    OLLAMA_MODEL: str = get_secret("OLLAMA_MODEL", "llama3.1:8b")
     OLLAMA_TEMPERATURE: float = 0.7
     OLLAMA_NUM_CTX: int = 4096
     OLLAMA_KEEP_ALIVE: str = "10m"
-    
-    # OpenAI Configuration (for embeddings)
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    EMBEDDING_MODEL: str = "text-embedding-3-large"
     
     # Interview Configuration - Full Mode
     MIN_QUESTIONS: int = 5
@@ -61,20 +80,17 @@ class Settings:
     # Question Templates by Review Type
     INITIAL_QUESTIONS: Dict[str, str] = {
         "self_review": """Let's begin your self-assessment. I'll ask you a series of questions to understand your performance over this review period.
-
 First, tell me about your most significant achievements this period. What accomplishments are you most proud of, and what impact did they have?""",
         
         "peer_review": """Thank you for providing feedback on your colleague. Your honest insights help create a comprehensive review.
-
 To start, what are this person's greatest strengths in your collaboration? Please provide specific examples of when these strengths made a difference.""",
         
         "manager_review": """Let's discuss your team member's performance. Your perspective is crucial for their development.
-
 Begin by describing their overall performance this period. What stands out to you about their contributions and growth?"""
     }
     
     # Logging
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    LOG_LEVEL: str = get_secret("LOG_LEVEL", "INFO")
     
     @classmethod
     def get_question_limits(cls, demo_mode: bool = False) -> Dict[str, Union[int, float]]:
@@ -92,6 +108,5 @@ Begin by describing their overall performance this period. What stands out to yo
             "min_topics": cls.MIN_TOPICS,
             "min_depth_score": cls.MIN_DEPTH_SCORE
         }
-    
 
 settings = Settings()

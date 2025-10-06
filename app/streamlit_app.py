@@ -16,7 +16,7 @@ from components.chat_interface import ChatInterface
 from components.report_generator import ReportGenerator
 from src.agents.interview_agent import InterviewAgent
 from src.storage.vector_store import ReviewVectorStore
-from src.llm.ollama_client import create_ollama_client
+from src.llm.llm_client import create_llm_client
 from src.aggregation.aggregator import PerformanceReviewAggregator
 from config.settings import Settings as settings
 
@@ -39,7 +39,7 @@ def initialize_llm_and_storage():
         
         # Initialize LLM client
         logger.info(f"Connecting to Ollama at {settings.OLLAMA_BASE_URL}")
-        llm_client = create_ollama_client()
+        llm_client = create_llm_client()
         llm = llm_client.get_llm()
         
         # Initialize vector store
